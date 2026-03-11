@@ -108,5 +108,46 @@ namespace PoweredSoft.DynamicQuery.Test
             Assert.NotEmpty(data.Filters);
             Assert.NotEmpty(data.Sorts);
         }
+
+        [Fact]
+        public void DeserializeNumberType()
+        {
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddPoweredSoftDynamicQuery();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            var jsonFilters = @"
+{
+    ""filters"":
+            [
+                {""path"":""int"",""value"":2147483647,""type"":""Equal"",""and"":false},
+                {""path"":""long"",""value"":122147483647,""type"":""Equal"",""and"":false},
+                {""path"":""decimal"",""value"":23.54,""type"":""Equal"",""and"":false},
+                {""path"":""bool_true"",""value"":true,""type"":""Equal"",""and"":false},
+                {""path"":""bool_false"",""value"":false,""type"":""Equal"",""and"":false}
+            ]
+}
+";
+            
+            var opts=new JsonSerializerOptions().AddPoweredSoftDynamicQueryTextJson(serviceProvider);
+
+            var queryCriteria = JsonSerializer.Deserialize<IQueryCriteria>(jsonFilters, opts);
+            var filters = queryCriteria.Filters;
+
+            ISimpleFilter? GetFilter(int index)
+            {
+                var filter = filters[index];
+                if (filter is ISimpleFilter simpleFilter) return simpleFilter;
+
+                return null;
+            }
+
+            var index = 0;
+            new List<Type> { typeof(int), typeof(long), typeof(decimal), typeof(bool) }.ForEach(type =>
+            {
+                Assert.True(GetFilter(index)?.Value?.GetType() == type);
+                index += 1;
+            });
+        }
     }
 }

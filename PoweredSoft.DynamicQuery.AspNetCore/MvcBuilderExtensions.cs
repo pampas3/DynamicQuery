@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using PoweredSoft.Data;
-using System.Text.Json.Serialization;
 using PoweredSoft.DynamicQuery.System.Text.Json;
 
 
@@ -22,11 +21,8 @@ namespace PoweredSoft.DynamicQuery.AspNetCore
             var serviceProvider = mvcBuilder.Services.BuildServiceProvider();
             mvcBuilder.AddJsonOptions(cfg =>
             {
-                if (enableStringEnumConverter)
-                    cfg.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                cfg.JsonSerializerOptions.Converters.Add(new DynamicQueryFilterConverter(serviceProvider));
-                cfg.JsonSerializerOptions.Converters.Add(new DynamicQuerySortConverter(serviceProvider));
-                cfg.JsonSerializerOptions.Converters.Add(new DynamicQueryJsonConverter(serviceProvider));
+                cfg.JsonSerializerOptions.AddPoweredSoftDynamicQueryTextJson(serviceProvider,
+                    enableStringEnumConverter);
             });
             return mvcBuilder;
         }

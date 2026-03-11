@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,13 +60,58 @@ namespace PoweredSoft.DynamicQuery.System.Text.Json
                     break;
 
                 case JsonValueKind.Number:
-                    value = elm.GetInt32();
+                    // Try to preserve the most appropriate CLR numeric type.
+                    // Use the raw text to detect fractional/exponent parts and parse using invariant culture.
+                    var raw = elm.GetRawText();
+                    // If the number contains a decimal point or exponent, prefer decimal for precision, then double.
+                    if (raw.IndexOf('.') >= 0 || raw.IndexOf('e') >= 0 || raw.IndexOf('E') >= 0)
+                    {
+                        if (decimal.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var dec))
+                        {
+                            value = dec;
+                        }
+                        else if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var dbl))
+                        {
+                            value = dbl;
+                        }
+                        else
+                        {
+                            // fallback to the element's GetDouble (may throw if out of range)
+                            try
+                            {
+                                value = elm.GetDouble();
+                            }
+                            catch
+                            {
+                                value = raw;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Integer number: try int -> long -> decimal
+                        if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i))
+                        {
+                            value = i;
+                        }
+                        else if (long.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l))
+                        {
+                            value = l;
+                        }
+                        else if (decimal.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture,
+                                     out var dec2))
+                        {
+                            value = dec2;
+                        }
+                        else
+                        {
+                            // last resort, return the raw text
+                            value = raw;
+                        }
+                    }
                     break;
 
                 case JsonValueKind.True:
-                    value = elm.GetBoolean();
-                    break;
-
                 case JsonValueKind.False:
                     value = elm.GetBoolean();
                     break;
